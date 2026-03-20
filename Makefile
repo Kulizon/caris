@@ -1,16 +1,18 @@
-.PHONY: help install requirements run clean test fine-tune download-data
+.PHONY: help install requirements run clean test split-dataset fine-tune evaluate download-data
 
 help:
 	@echo "CARIS Project"
 	@echo ""
 	@echo "Available targets:"
-	@echo "  make install       - Install all dependencies and download data"
-	@echo "  make requirements  - Install from requirements.txt"
-	@echo "  make download-data - Download required data file"
-	@echo "  make run           - Run the main project"
-	@echo "  make clean         - Remove Python cache files"
-	@echo "  make test          - Run the test file"
-	@echo "  make fine-tune     - Fine-tune YOLO on Iconclass dataset"
+	@echo "  make install        - Install all dependencies and download data"
+	@echo "  make requirements   - Install from requirements.txt"
+	@echo "  make download-data  - Download required data file"
+	@echo "  make run            - Run the main project"
+	@echo "  make clean          - Remove Python cache files"
+	@echo "  make test           - Run the test file"
+	@echo "  make split-dataset  - Split Iconclass dataset into tune/eval"
+	@echo "  make fine-tune      - Fine-tune YOLO on Iconclass dataset"
+	@echo "  make evaluate       - Evaluate CARIS on the eval dataset"
 	@echo ""
 
 install: requirements download-data
@@ -33,5 +35,15 @@ clean:
 	find . -type f -name "*.pyc" -delete
 	find . -type d -name ".pytest_cache" -exec rm -rf {} + 2>/dev/null || true
 
-fine-tune: download-data
+split-dataset:
+	@if [ ! -f eval_data/data.json ] || [ ! -f tune_data/data.json ]; then \
+		python split_dataset.py; \
+	else \
+		echo "Dataset already split (eval_data/ and tune_data/ exist). Skipping."; \
+	fi
+
+fine-tune: split-dataset download-data
 	python fine_tune.py
+
+evaluate: split-dataset download-data
+	python evaluate.py
