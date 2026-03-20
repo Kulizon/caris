@@ -6,3 +6,6 @@ __pycache__
 test_data.json
 iconclass_dataset/
 runs/
+tune_data/
+eval_data/
+datasets/
