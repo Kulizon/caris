@@ -1,5 +1,8 @@
 yolo*n.pt
+yolo*n-cls.pt
 __pycache__
 .context
 .venv
 test_data.json
+iconclass_dataset/
+runs/

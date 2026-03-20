@@ -1,4 +1,4 @@
-.PHONY: help install requirements run clean test
+.PHONY: help install requirements run clean test fine-tune download-data
 
 help:
 	@echo "CARIS Project"
@@ -10,6 +10,7 @@ help:
 	@echo "  make run           - Run the main project"
 	@echo "  make clean         - Remove Python cache files"
 	@echo "  make test          - Run the test file"
+	@echo "  make fine-tune     - Fine-tune YOLO on Iconclass dataset"
 	@echo ""
 
 install: requirements download-data
@@ -31,3 +32,6 @@ clean:
 	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
 	find . -type f -name "*.pyc" -delete
 	find . -type d -name ".pytest_cache" -exec rm -rf {} + 2>/dev/null || true
+
+fine-tune: download-data
+	python fine_tune.py
