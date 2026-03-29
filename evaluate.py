@@ -6,7 +6,7 @@ import os
 from main import find_iconclass_tags
 from utils import detect_objects_in_image
 
-DEFAULT_MODEL = "models/yolo11n.pt"
+DEFAULT_MODEL = "models/yolo26n.pt"
 EVAL_DIR = "eval_data"
 
 def _extract_ic_codes(entry) -> list[str]:
@@ -72,10 +72,15 @@ def evaluate(
             print(f"  [WARN] {img_name}: {e}")
             continue
 
+        matches = sorted(set(pred_codes) & gt_codes)
+
         print(f"Image    : {img_name}")
         print(f"  YOLO   : {detected}")
         print(f"  Predicted: {sorted(pred_codes) if pred_codes else '(none)'}")
         print(f"  Actual   : {sorted(gt_codes)}")
+        print(f"  Any actual in predicted? {'YES' if matches else 'NO'}")
+        if matches:
+            print(f"  Matches   : {matches}")
         print()
         if (idx + 1) % 100 == 0:
             pct = 100.0 * (idx + 1) / len(keys)

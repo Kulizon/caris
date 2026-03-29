@@ -3,7 +3,7 @@ from recommendation_utils import recommend_image_simple, recommend_image_idf_bas
 from utils import detect_objects_in_image
 import iconclass
 
-DEFAULT_TRAINED_MODEL = 'models/yolo11n.pt'
+DEFAULT_TRAINED_MODEL = 'models/yolo26n.pt'
 
 
 def find_iconclass_tags(image_name: str, iconclass_branch_to_start_from: str = '', search_individually: str = "ALWAYS",
