@@ -30,12 +30,11 @@ def predict_iconclass_codes(
     trained_model: str = DEFAULT_MODEL,
 ) -> tuple[set[str], list[str]]:
     detected = detect_objects_in_image(trained_model, image_path)
-    if len(detected) < 2:
+    if len(detected) == 0:
         return set(), detected
     iconclass_tags = find_iconclass_tags(
         image_name=image_path,
         iconclass_branch_to_start_from="",
-        search_individually="NEVER",
         trained_model=trained_model,
     )
     flat: set[str] = set()
