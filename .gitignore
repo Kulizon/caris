@@ -9,3 +9,5 @@ runs/
 tune_data/
 eval_data/
 datasets/
+_*
+models/
