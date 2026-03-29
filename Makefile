@@ -19,7 +19,7 @@ clean:
 	find . -type d -name ".pytest_cache" -exec rm -rf {} + 2>/dev/null || true
 
 split-dataset:
-	rm -rf eval_data/ tune_data/
+	rm -r eval_data/ tune_data/
 	python split_dataset.py; \
 
 evaluate: split-dataset download-data
