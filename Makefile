@@ -9,6 +9,8 @@ download-data:
 	curl -s -L -o test_data.json https://iconclass.org/testset/data.json
 	mkdir -p models
 	curl -s -L -o models/yolo26n.pt https://huggingface.co/Ultralytics/YOLO26/resolve/main/yolo26n.pt
+	mkdir -p datasets
+	curl -s -L -o datasets/iconclass_dataset.zip https://iconclass.org/testset/779ba2ca9e977c58d818e3823a676973.zip
 
 run:
 	python main.py
@@ -19,8 +21,8 @@ clean:
 	find . -type d -name ".pytest_cache" -exec rm -rf {} + 2>/dev/null || true
 
 split-dataset:
-	rm -r eval_data/ tune_data/
-	python split_dataset.py; \
+	rm -rf eval_data/ tune_data/
+	python split_dataset.py
 
-evaluate: split-dataset download-data
+evaluate: split-dataset
 	python evaluate.py
