@@ -1,9 +1,13 @@
-.PHONY: install requirements run clean test split-dataset fine-tune evaluate download-data
+.PHONY: install requirements requirements-gemma run clean test split-dataset fine-tune evaluate download-data
 
 install: requirements download-data
 
 requirements:
 	pip install -r requirements.txt
+
+requirements-gemma:
+	pip install ollama
+	ollama pull gemma4:e4b
 
 download-data:
 	curl -s -L -o test_data.json https://iconclass.org/testset/data.json
