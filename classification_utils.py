@@ -1,4 +1,5 @@
-from utils import load_data_from_json
+from utils import load_data_from_json, detect_objects_in_image, get_meanings_from_codes
+from embeddings_utils import get_iconclass_codes_embeddings
 
 
 def search_for_equal_tags_in_subtree(iconclass_subtree, detected_objects_list):
@@ -43,3 +44,20 @@ def reduce_iconclass_codes(iconclass_codes, detected_object):
                 min_extra_words = extra_words
                 best_code = code
     return best_code
+
+
+def get_iconclass_codes_gemma(trained_model: str="gemma4:26b", image_path: str=""):
+    """
+    Orchestrates the Gemma/Vector search pipeline:
+    1. Detect objects using Gemma (keyword extraction).
+    2. Map keywords to Iconclass codes using embeddings.
+    Returns: (list of codes, list of keywords)
+    """
+    # Use the dispatcher in utils.py which handles both YOLO and Gemma
+    classified_objects = detect_objects_in_image(trained_model, image_path)
+    
+    # Use the robust implementation in embeddings_utils.py
+    codes = get_iconclass_codes_embeddings(classified_objects)
+
+    return codes, classified_objects
+

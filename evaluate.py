@@ -5,6 +5,7 @@ import os
 
 from main import find_iconclass_tags
 from utils import detect_objects_in_image
+from classification_utils import get_iconclass_codes_gemma
 
 DEFAULT_MODEL = "models/yolo26n.pt"
 EVAL_DIR = "eval_data"
@@ -44,6 +45,17 @@ def predict_iconclass_codes(
     return flat, detected
 
 
+def predict_iconclass_codes_gemma(
+    image_path: str,
+    trained_model: str,
+) -> tuple[set[str], list[str]]:
+    codes, classified_objects = get_iconclass_codes_gemma(trained_model, image_path)
+    flat: set[str] = set()
+    for code in codes:
+        flat.add(str(code))
+    return flat, classified_objects
+
+
 def evaluate(
     eval_dir: str = EVAL_DIR,
     trained_model: str = DEFAULT_MODEL,
@@ -67,7 +79,10 @@ def evaluate(
             continue
 
         try:
-            pred_codes, detected = predict_iconclass_codes(img_path, trained_model)
+            if "gemma" in trained_model.lower():
+                pred_codes, detected = predict_iconclass_codes_gemma(img_path, trained_model)
+            else:
+                pred_codes, detected = predict_iconclass_codes(img_path, trained_model)
         except Exception as e:
             print(f"  [WARN] {img_name}: {e}")
             continue
@@ -75,7 +90,7 @@ def evaluate(
         matches = sorted(set(pred_codes) & gt_codes)
 
         print(f"Image    : {img_name}")
-        print(f"  YOLO   : {detected}")
+        print(f"  Objects   : {detected}")
         print(f"  Predicted: {sorted(pred_codes) if pred_codes else '(none)'}")
         print(f"  Actual   : {sorted(gt_codes)}")
         print(f"  Any actual in predicted? {'YES' if matches else 'NO'}")

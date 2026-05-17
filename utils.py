@@ -58,6 +58,7 @@ def detect_objects_yolo(trained_model, image_name):
                 detected_objects.append(detected_object)
     return detected_objects
 
+# Gemma
 def detect_objects_gemma(trained_model, image_name):
     import ollama
 
@@ -93,3 +94,24 @@ def detect_objects_in_image(trained_model, image_name):
         return detect_objects_gemma(trained_model, image_name)
     else:
         raise ValueError("Unknown model")
+
+def get_meanings_from_codes(codes, filename=None):
+    if filename is None:
+        filename = os.path.join(os.path.dirname(__file__), "data", "iconclass_clean.txt")
+    
+    if not os.path.exists(filename):
+        return []
+
+    code_to_meaning = {}
+    with open(filename, 'r', encoding='utf-8') as f:
+        for line in f:
+            parts = line.strip().split('|', 1)
+            if len(parts) == 2:
+                code_to_meaning[parts[0]] = parts[1]
+    
+    meanings = []
+    for code in codes:
+        if code in code_to_meaning:
+            meanings.append(code_to_meaning[code])
+    return meanings
+

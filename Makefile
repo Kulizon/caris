@@ -1,6 +1,6 @@
-.PHONY: install requirements requirements-gemma run clean test split-dataset fine-tune evaluate download-data
+.PHONY: install requirements requirements-gemma run clean test split-dataset fine-tune evaluate download-data vector-base
 
-install: requirements download-data
+install: requirements download-data vector-base
 
 requirements:
 	pip install -r requirements.txt
@@ -8,6 +8,7 @@ requirements:
 requirements-gemma:
 	pip install ollama
 	ollama pull gemma4:e4b
+	ollama pull mxbai-embed-large
 
 download-data:
 	curl -s -L -o test_data.json https://iconclass.org/testset/data.json
@@ -15,6 +16,9 @@ download-data:
 	curl -s -L -o models/yolo26n.pt https://huggingface.co/Ultralytics/YOLO26/resolve/main/yolo26n.pt
 	mkdir -p datasets
 	curl -s -L -o datasets/iconclass_dataset.zip https://iconclass.org/testset/779ba2ca9e977c58d818e3823a676973.zip
+
+vector-base:
+	python embeddings_utils.py
 
 run:
 	python main.py
