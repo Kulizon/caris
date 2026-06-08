@@ -46,7 +46,7 @@ def reduce_iconclass_codes(iconclass_codes, detected_object):
     return best_code
 
 
-def get_iconclass_codes_gemma(trained_model: str="gemma4:26b", image_path: str=""):
+def get_iconclass_codes_gemma(trained_model: str="gemma4:12b", image_path: str=""):
     """
     Orchestrates the Gemma/Vector search pipeline:
     1. Detect objects using Gemma (keyword extraction).

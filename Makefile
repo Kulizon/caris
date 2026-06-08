@@ -7,7 +7,8 @@ requirements:
 
 requirements-gemma:
 	pip install ollama
-	ollama pull gemma4:e4b
+	pip install chromadb
+	ollama pull gemma4:12b
 	ollama pull mxbai-embed-large
 
 download-data:

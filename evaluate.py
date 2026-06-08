@@ -79,7 +79,7 @@ def evaluate(
             continue
 
         try:
-            if "gemma" in trained_model.lower():
+            if "gemma" in trained_model.lower() or "ram" in trained_model.lower():
                 pred_codes, detected = predict_iconclass_codes_gemma(img_path, trained_model)
             else:
                 pred_codes, detected = predict_iconclass_codes(img_path, trained_model)

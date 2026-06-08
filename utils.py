@@ -87,11 +87,52 @@ def detect_objects_gemma(trained_model, image_name):
     content = response['message']['content'].strip()
     return [item.strip() for item in content.split(',')] if content else []
 
+# RAM (Recognize Anything Plus)
+def detect_objects_ram(trained_model, image_name):
+    import warnings
+    import contextlib
+    import os
+
+    warnings.filterwarnings("ignore")
+
+    if not (trained_model.startswith("http://") or trained_model.startswith("https://") or os.path.isfile(trained_model)):
+        trained_model = "https://huggingface.co/xinyu1205/recognize-anything-plus-model/resolve/main/ram_plus_swin_large_14m.pth"
+
+    with open(os.devnull, 'w') as f:
+        with contextlib.redirect_stdout(f), contextlib.redirect_stderr(f):
+            import torch
+            from PIL import Image
+            from ram.models import ram_plus
+            from ram import inference_ram
+            from ram import get_transform
+
+            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+            model = ram_plus(
+                pretrained=trained_model,
+                image_size=384,
+                vit="swin_l"
+            )
+            model.eval()
+            model = model.to(device)
+
+            transform = get_transform(image_size=384)
+            image = Image.open(image_name).convert("RGB")
+            image = transform(image).unsqueeze(0).to(device)
+
+            tags_en, _ = inference_ram(image, model)
+
+    if tags_en:
+        return [tag.strip() for tag in tags_en.split('|')]
+    return []
+
 def detect_objects_in_image(trained_model, image_name):
     if "yolo" in trained_model.lower():
         return detect_objects_yolo(trained_model, image_name)
     elif "gemma" in trained_model.lower():
         return detect_objects_gemma(trained_model, image_name)
+    elif "ram" in trained_model.lower():
+        return detect_objects_ram(trained_model, image_name)
     else:
         raise ValueError("Unknown model")
 

@@ -170,7 +170,7 @@ def create_vector_base(data_path=DEFAULT_DATA_PATH, db_path=DEFAULT_DB_PATH):
 
     print("\n[SUCCESS] Vector database created/updated!")
 
-def get_iconclass_codes_embeddings(context_list, n_results=5):
+def get_iconclass_codes_embeddings(context_list, n_results=50):
     """
     Given a list of keywords/context strings, returns a flat list of 
     unique Iconclass codes from the vector database.
