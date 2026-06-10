@@ -47,6 +47,12 @@ def detect_objects_yolo(trained_model, image_name):
     detected_objects = []
     model = YOLO(trained_model)
     image_recognition = model(image_name)
+    
+    speed_metrics = {}
+    if image_recognition and len(image_recognition) > 0:
+        # ultralytics speed is in ms, convert to seconds to be consistent
+        speed_metrics = {k: v / 1000.0 for k, v in image_recognition[0].speed.items()}
+
     for result in image_recognition:
         for box in result.boxes:
             detected_object = model.names[int(box.cls)]
@@ -56,7 +62,7 @@ def detect_objects_yolo(trained_model, image_name):
             # TODO delete this
             if detected_object not in detected_objects:
                 detected_objects.append(detected_object)
-    return detected_objects
+    return detected_objects, speed_metrics
 
 # Gemma
 def detect_objects_gemma(trained_model, image_name):
@@ -85,7 +91,7 @@ def detect_objects_gemma(trained_model, image_name):
     )
     
     content = response['message']['content'].strip()
-    return [item.strip() for item in content.split(',')] if content else []
+    return ([item.strip() for item in content.split(',')] if content else []), {}
 
 # RAM (Recognize Anything Plus)
 def detect_objects_ram(trained_model, image_name):
@@ -123,8 +129,8 @@ def detect_objects_ram(trained_model, image_name):
             tags_en, _ = inference_ram(image, model)
 
     if tags_en:
-        return [tag.strip() for tag in tags_en.split('|')]
-    return []
+        return [tag.strip() for tag in tags_en.split('|')], {}
+    return [], {}
 
 def detect_objects_in_image(trained_model, image_name):
     if "yolo" in trained_model.lower():

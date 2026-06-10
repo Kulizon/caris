@@ -51,13 +51,13 @@ def get_iconclass_codes_gemma(trained_model: str="gemma4:12b", image_path: str="
     Orchestrates the Gemma/Vector search pipeline:
     1. Detect objects using Gemma (keyword extraction).
     2. Map keywords to Iconclass codes using embeddings.
-    Returns: (list of codes, list of keywords)
+    Returns: (list of codes, list of keywords, speed_metrics)
     """
     # Use the dispatcher in utils.py which handles both YOLO and Gemma
-    classified_objects = detect_objects_in_image(trained_model, image_path)
+    classified_objects, speed_metrics = detect_objects_in_image(trained_model, image_path)
     
     # Use the robust implementation in embeddings_utils.py
     codes = get_iconclass_codes_embeddings(classified_objects)
 
-    return codes, classified_objects
+    return codes, classified_objects, speed_metrics
 

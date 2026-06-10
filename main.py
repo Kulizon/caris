@@ -5,16 +5,27 @@ import iconclass
 
 DEFAULT_TRAINED_MODEL = 'models/yolo26n.pt'
 
+# Global cache for iconclass hierarchy
+_ICONCLASS_CACHE = None
+
+def get_iconclass_hierarchy():
+    global _ICONCLASS_CACHE
+    if _ICONCLASS_CACHE is None:
+        _ICONCLASS_CACHE = iconclass.init()
+    return _ICONCLASS_CACHE
+
 
 def find_iconclass_tags(image_name: str, iconclass_branch_to_start_from: str = '', search_individually: str = "ALWAYS",
-                        trained_model: str = DEFAULT_TRAINED_MODEL):
+                        trained_model: str = DEFAULT_TRAINED_MODEL, detected_objects: list = None):
     if search_individually not in ["ALWAYS", "IF_NONE_FOUND", "NEVER"]:
         search_individually = "NEVER"
 
     result_codes = []
-    iconclass_subbranch = iconclass.init()[iconclass_branch_to_start_from]
+    # Use cached hierarchy
+    iconclass_subbranch = get_iconclass_hierarchy()[iconclass_branch_to_start_from]
 
-    detected_objects = detect_objects_in_image(trained_model, image_name)
+    if detected_objects is None:
+        detected_objects = detect_objects_in_image(trained_model, image_name)
 
     search_result = search_for_equal_tags_in_subtree(iconclass_subbranch, detected_objects)
     if search_result:

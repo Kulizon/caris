@@ -8,7 +8,7 @@ DATASET_ZIP = os.path.join("datasets", "iconclass_dataset.zip")
 TUNE_DIR = "tune_data"
 EVAL_DIR = "eval_data"
 SEED = 37
-EVAL_FRACTION = 0.0001
+EVAL_FRACTION = 0.00115
 
 
 def split_dataset(
@@ -36,6 +36,7 @@ def split_dataset(
     random.shuffle(image_keys)
 
     n_eval = max(1, int(len(image_keys) * eval_fraction))
+    print(f"  Total images: {len(image_keys)}")
     eval_keys = set(image_keys[:n_eval])
     tune_keys = set(image_keys[n_eval:])
 
