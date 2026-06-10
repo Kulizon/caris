@@ -8,6 +8,7 @@ from utils import detect_objects_in_image
 from classification_utils import get_iconclass_codes_gemma
 
 DEFAULT_MODEL = "models/yolo26n.pt"
+# DEFAULT_MODEL = "gemma3:12b"
 EVAL_DIR = "eval_data"
 
 def _extract_ic_codes(entry) -> list[str]:
@@ -172,7 +173,7 @@ def evaluate(
     mean_precision = sum(r["metrics"]["precision"] for r in results) / processed_images if processed_images > 0 else 0
     mean_recall = sum(r["metrics"]["recall"] for r in results) / processed_images if processed_images > 0 else 0
     mean_f1 = sum(r["metrics"]["f1"] for r in results) / processed_images if processed_images > 0 else 0
-    total_time = sum(r["metrics"]["total_pipeline_time"] for r in results)
+    total_time = sum(r["metrics"]["total_pipeline_time_s"] for r in results)
     avg_time = total_time / processed_images if processed_images > 0 else 0
 
     summary = {

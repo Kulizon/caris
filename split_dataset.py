@@ -8,7 +8,7 @@ DATASET_ZIP = os.path.join("datasets", "iconclass_dataset.zip")
 TUNE_DIR = "tune_data"
 EVAL_DIR = "eval_data"
 SEED = 37
-EVAL_FRACTION = 0.00115
+EVAL_FRACTION = 0.0115
 
 
 def split_dataset(
