@@ -1,4 +1,4 @@
-.PHONY: install requirements requirements-gemma run clean test split-dataset fine-tune evaluate download-data vector-base
+.PHONY: install requirements requirements-gemma run clean test split-dataset fine-tune evaluate download-data vector-base download-coco evaluate-coco evaluate-coco-all
 
 install: requirements download-data vector-base
 
@@ -35,3 +35,20 @@ split-dataset:
 
 evaluate: split-dataset
 	python evaluate.py
+
+download-coco:
+	mkdir -p datasets/coco/annotations datasets/coco/val2017
+	curl -L -o /tmp/coco_annotations.zip http://images.cocodataset.org/annotations/annotations_trainval2017.zip
+	unzip -o /tmp/coco_annotations.zip "annotations/instances_val2017.json" -d datasets/coco/
+	curl -L -o /tmp/coco_val2017.zip http://images.cocodataset.org/zips/val2017.zip
+	unzip -o /tmp/coco_val2017.zip -d datasets/coco/
+	rm /tmp/coco_annotations.zip /tmp/coco_val2017.zip
+
+evaluate-coco: datasets/coco/annotations/instances_val2017.json
+	python evaluate_coco.py --modes yolo --max-images 100
+
+evaluate-coco-all: datasets/coco/annotations/instances_val2017.json
+	python evaluate_coco.py --modes yolo gemma --max-images 100
+
+datasets/coco/annotations/instances_val2017.json:
+	$(MAKE) download-coco
