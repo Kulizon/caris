@@ -11,6 +11,7 @@ eval_data/
 datasets/
 data/
 _*
+!__init__.py
 models/
 recognize-anything/
 output/
