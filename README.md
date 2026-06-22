@@ -26,6 +26,9 @@ python -m pip install --upgrade pip
 
 # Instalacja podstawowych bibliotek (w tym zoptymalizowanej wersji transformers dla Pythona 3.13)
 pip install -r requirements.txt
+
+# Instalacja pakietu CARIS w trybie edytowalnym (umożliwia uruchamianie przez `python -m caris...`)
+pip install -e .
 ```
 
 ### 2. Instalacja i konfiguracja RAM++ (Recognize Anything)
@@ -58,7 +61,7 @@ Dla modeli korzystających z wyszukiwania semantycznego (**Gemma** oraz **RAM**)
    ```
 4. Utwórz lokalną wektorową bazę kodów Iconclass, uruchamiając skrypt narzędziowy:
    ```bash
-   python embeddings_utils.py
+   python -m caris.embeddings
    ```
    *Skrypt pobierze definicje Iconclass, wygeneruje dla nich embeddingi i zapisze lokalną bazę ChromaDB w folderze `data/iconclass_db`.*
 
@@ -66,7 +69,7 @@ Dla modeli korzystających z wyszukiwania semantycznego (**Gemma** oraz **RAM**)
 
 ## 🤖 Dostępne modele detekcji
 
-W pliku `utils.py` zintegrowana jest funkcja `detect_objects_in_image(trained_model, image_name)`. Automatycznie rozpoznaje ona wybrany model na podstawie jego nazwy:
+W pakiecie `caris.detection` zintegrowana jest funkcja `detect_objects_in_image(trained_model, image_name)`. Automatycznie rozpoznaje ona wybrany model na podstawie jego nazwy:
 
 | Model | Identyfikator w `--model` | Metoda mapowania na Iconclass | Charakterystyka |
 | :--- | :--- | :--- | :--- |
@@ -78,26 +81,40 @@ W pliku `utils.py` zintegrowana jest funkcja `detect_objects_in_image(trained_mo
 
 ## 📈 Uruchamianie ewaluacji (Evaluation)
 
-Ewaluację modeli przeprowadza się za pomocą skryptu `evaluate.py`. Uruchamia on detekcję na obrazach testowych z katalogu `eval_data/images` i porównuje wyniki z rzeczywistymi kodami Iconclass z pliku `eval_data/data.json`.
+Ewaluację modeli przeprowadza się za pomocą modułu `caris.evaluation.evaluate`. Uruchamia on detekcję na obrazach testowych z katalogu `eval_data/images` i porównuje wyniki z rzeczywistymi kodami Iconclass z pliku `eval_data/data.json`.
 
 ### 1. Ewaluacja za pomocą modelu YOLO
 ```bash
-python evaluate.py --model models/yolo26n.pt
+python -m caris.evaluation.evaluate --model models/yolo26n.pt
 ```
 
 ### 2. Ewaluacja za pomocą modelu Gemma (Ollama)
 ```bash
-python evaluate.py --model gemma
+python -m caris.evaluation.evaluate --model gemma
 ```
 
 ### 3. Ewaluacja za pomocą modelu RAM++
 ```bash
-python evaluate.py --model ram
+python -m caris.evaluation.evaluate --model ram
 ```
 
-### ⚙️ Przydatne parametry skryptu `evaluate.py`:
+### ⚙️ Przydatne parametry modułu `caris.evaluation.evaluate`:
+* `--mapping <auto|structural|semantic>` - Określa sposób mapowania wykrytych obiektów/tagów na kody Iconclass (domyślnie: `auto`):
+  * `auto` - automatyczny dobór (YOLO korzysta ze `structural`, Gemma oraz RAM++ z `semantic`).
+  * `structural` - dopasowanie ścisłe i podzbiorów w hierarchicznym drzewie słów kluczowych Iconclass.
+  * `semantic` - semantyczne wyszukiwanie wektorowe w lokalnej bazie wektorowej ChromaDB (embeddings).
 * `--max-images <liczba>` - Ogranicza liczbę obrazów do ewaluacji (doskonałe do szybkich testów, np. `--max-images 5`).
 * `--eval-dir <ścieżka>` - Umożliwia wskazanie innego katalogu ze zbiorem ewaluacyjnym (domyślnie: `eval_data`).
+
+### 💡 Przykłady niestandardowych kombinacji (6 możliwości)
+Dzięki rozdzieleniu modelu detekcji od metody mapowania możesz uruchomić dowolne z 6 połączeń, na przykład:
+```bash
+# YOLO z wyszukiwaniem wektorowym (semantycznym) zamiast hierarchicznego
+python -m caris.evaluation.evaluate --model models/yolo26n.pt --mapping semantic
+
+# RAM++ z wyszukiwaniem hierarchicznym (strukturalnym) zamiast wektorowego
+python -m caris.evaluation.evaluate --model ram --mapping structural
+```
 
 ---
 
@@ -106,7 +123,7 @@ python evaluate.py --model ram
 Możesz szybko przetestować samą detekcję na wybranym obrazku (np. `polowanie.jpg`) za pomocą skryptu testowego:
 
 ```python
-from utils import detect_objects_in_image
+from caris.detection import detect_objects_in_image
 
 # Uruchomienie detekcji RAM++
 tagi = detect_objects_in_image("ram", "polowanie.jpg")

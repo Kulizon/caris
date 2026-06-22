@@ -84,5 +84,9 @@ def split_dataset(
     print(f"Done. eval_data/images: {n_eval_imgs}, tune_data/images: {n_tune_imgs}")
 
 
-if __name__ == "__main__":
+def main():
     split_dataset()
+
+
+if __name__ == "__main__":
+    main()

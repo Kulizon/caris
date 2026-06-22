@@ -1,20 +1,24 @@
+"""ChromaDB-backed Iconclass embeddings: build the vector base and query it."""
+
 import json
 import os
+
 import chromadb
 import ollama
 import requests
 from tqdm import tqdm
 
-
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DEFAULT_DB_PATH = os.path.join(BASE_DIR, "data", "iconclass_db")
-DEFAULT_DATA_PATH = os.path.join(BASE_DIR, "data", "iconclass_embeddings.jsonl")
-DEFAULT_TXT_PATH = os.path.join(BASE_DIR, "data", "iconclass_clean.txt")
-EMBEDDING_MODEL = "mxbai-embed-large"
-BATCH_SIZE = 128
+from caris.config import (
+    BATCH_SIZE,
+    DEFAULT_CLEAN_TXT_PATH,
+    DEFAULT_DB_PATH,
+    DEFAULT_EMBEDDINGS_PATH,
+    EMBEDDING_MODEL,
+)
 
 _CHROMA_CLIENT = None
 _COLLECTION = None
+
 
 def get_iconclass_collection(db_path=DEFAULT_DB_PATH):
     """Lazy initialization of the ChromaDB collection."""
@@ -23,6 +27,7 @@ def get_iconclass_collection(db_path=DEFAULT_DB_PATH):
         _CHROMA_CLIENT = chromadb.PersistentClient(path=db_path)
         _COLLECTION = _CHROMA_CLIENT.get_or_create_collection(name="iconclass")
     return _COLLECTION
+
 
 def embed_batch(documents, model=EMBEDDING_MODEL):
     """
@@ -43,7 +48,8 @@ def embed_batch(documents, model=EMBEDDING_MODEL):
                 print(f"[ERROR] Skipping document: {doc[:100]}... Error: {inner}")
                 embeddings.append(None)
         return embeddings
-    
+
+
 def get_iconclass_definitions():
     owner = "iconclass"
     repo = "data"
@@ -94,15 +100,15 @@ def get_iconclass_definitions():
     sorted_lines = sorted(all_lines)
 
     # Ensure parent directory exists
-    os.makedirs(os.path.dirname(DEFAULT_DATA_PATH), exist_ok=True)
+    os.makedirs(os.path.dirname(DEFAULT_EMBEDDINGS_PATH), exist_ok=True)
 
     # ===== TXT =====
-    with open(DEFAULT_TXT_PATH, "w", encoding="utf-8") as f:
+    with open(DEFAULT_CLEAN_TXT_PATH, "w", encoding="utf-8") as f:
         for line in sorted_lines:
             f.write(line + "\n")
 
     # ===== JSONL =====
-    with open(DEFAULT_DATA_PATH, "w", encoding="utf-8") as f:
+    with open(DEFAULT_EMBEDDINGS_PATH, "w", encoding="utf-8") as f:
         for line in sorted_lines:
             # split: 11A22|symbols ~ Divine Nature
             if "|" in line:
@@ -118,23 +124,24 @@ def get_iconclass_definitions():
             }
             f.write(json.dumps(obj, ensure_ascii=False) + "\n")
 
-    print(f"Saved to {DEFAULT_DATA_PATH}")
+    print(f"Saved to {DEFAULT_EMBEDDINGS_PATH}")
+
 
 def _process_upsert(collection, batch):
     """Helper to handle the embedding and upsert logic for a batch."""
     ids = [item["id"] for item in batch]
     documents = [item["text"] for item in batch]
-    
+
     embeddings = embed_batch(documents)
-    
+
     # Filter out failures while maintaining alignment
     valid_data = [(i, d, e) for i, d, e in zip(ids, documents, embeddings) if e is not None]
-    
+
     if not valid_data:
         return
 
     v_ids, v_docs, v_embs = zip(*valid_data)
-    
+
     collection.upsert(
         ids=list(v_ids),
         documents=list(v_docs),
@@ -142,10 +149,11 @@ def _process_upsert(collection, batch):
         metadatas=[{"text": d} for d in v_docs]
     )
 
-def create_vector_base(data_path=DEFAULT_DATA_PATH, db_path=DEFAULT_DB_PATH):
+
+def create_vector_base(data_path=DEFAULT_EMBEDDINGS_PATH, db_path=DEFAULT_DB_PATH):
     """Reads the JSONL data and populates the vector database using streaming."""
     collection = get_iconclass_collection(db_path)
-    
+
     if not os.path.exists(data_path):
         raise FileNotFoundError(f"Source data not found at {data_path}")
 
@@ -155,31 +163,32 @@ def create_vector_base(data_path=DEFAULT_DATA_PATH, db_path=DEFAULT_DB_PATH):
                 yield json.loads(line)
 
     print(f"Starting vector base creation from {data_path}")
-    
+
     batch = []
-    # Using tqdm for progress tracking. Note: total is unknown without reading file twice, 
+    # Using tqdm for progress tracking. Note: total is unknown without reading file twice,
     # but we can estimate or just show iterations.
     for item in tqdm(stream_data(data_path), desc="Processing Iconclass"):
         batch.append(item)
         if len(batch) >= BATCH_SIZE:
             _process_upsert(collection, batch)
             batch = []
-            
+
     if batch:
         _process_upsert(collection, batch)
 
     print("\n[SUCCESS] Vector database created/updated!")
 
+
 def get_iconclass_codes_embeddings(context_list, n_results=50):
     """
-    Given a list of keywords/context strings, returns a flat list of 
+    Given a list of keywords/context strings, returns a flat list of
     unique Iconclass codes from the vector database.
     """
     if not context_list:
         return []
 
     collection = get_iconclass_collection()
-    
+
     # Batch generate embeddings for all context strings
     try:
         response = ollama.embed(model=EMBEDDING_MODEL, input=context_list)
@@ -189,20 +198,24 @@ def get_iconclass_codes_embeddings(context_list, n_results=50):
         return []
 
     results = collection.query(
-        query_embeddings=query_embeddings, 
+        query_embeddings=query_embeddings,
         n_results=n_results
     )
-    
+
     all_codes = set()
     if results["ids"]:
         for code_list in results["ids"]:
             for code in code_list:
                 all_codes.add(str(code))
-            
+
     return sorted(list(all_codes))
 
 
-if __name__ == "__main__":
+def main():
     # If run directly, assume we want to rebuild/update the base
     get_iconclass_definitions()
     create_vector_base()
+
+
+if __name__ == "__main__":
+    main()
