@@ -1,0 +1,6 @@
+[console_scripts]
+caris-build-vectors = caris.embeddings:main
+caris-evaluate = caris.evaluation.evaluate:main
+caris-evaluate-coco = caris.evaluation.evaluate_coco:main
+caris-scrape = caris.tools.scraper:main
+caris-split = caris.tools.split_dataset:main

@@ -3,10 +3,10 @@ Scraper for bibliasacra.nl - downloads illustration data with images and iconcla
 
 Two modes:
   Mode 1 (default): Scrape category listing pages to build the base dataset.
-      python scraper.py --output-dir scraped_data [--limit N]
+      python -m caris.tools.scraper --output-dir scraped_data [--limit N]
 
   Mode 2 (detail enrichment): Fetch each illustration's detail page + download images.
-      python scraper.py --output-dir scraped_data --scraped-data scraped_data/data.json
+      python -m caris.tools.scraper --output-dir scraped_data --scraped-data scraped_data/data.json
 """
 
 import argparse

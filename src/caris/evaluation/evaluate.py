@@ -1,15 +1,14 @@
 import json
 import os
-import time
 from datetime import datetime
 
-from main import find_iconclass_tags
-from utils import detect_objects_in_image
-from classification_utils import get_iconclass_codes_gemma
+from caris.config import DEFAULT_TRAINED_MODEL, EVAL_DIR, OUTPUT_DIR
+from caris.pipeline import get_iconclass_codes
+from caris.timing import timed
 
-DEFAULT_MODEL = "models/yolo26n.pt"
+DEFAULT_MODEL = DEFAULT_TRAINED_MODEL
 # DEFAULT_MODEL = "gemma3:12b"
-EVAL_DIR = "eval_data"
+
 
 def _extract_ic_codes(entry) -> list[str]:
     if isinstance(entry, list):
@@ -26,44 +25,10 @@ def load_eval_data(eval_dir: str = EVAL_DIR) -> dict:
     with open(path) as f:
         return json.load(f)
 
-
-def predict_iconclass_codes(
-    image_path: str,
-    trained_model: str = DEFAULT_MODEL,
-) -> tuple[set[str], list[str], dict]:
-    # 1. Detection
-    detected, speed_metrics = detect_objects_in_image(trained_model, image_path)
-    if len(detected) == 0:
-        return set(), detected, speed_metrics
-    
-    # 2. Tag finding (passing already detected objects)
-    iconclass_tags = find_iconclass_tags(
-        image_name=image_path,
-        iconclass_branch_to_start_from="",
-        trained_model=trained_model,
-        detected_objects=detected
-    )
-    flat: set[str] = set()
-    for code_set in iconclass_tags:
-        for code in code_set:
-            flat.add(str(code))
-    return flat, detected, speed_metrics
-
-
-def predict_iconclass_codes_gemma(
-    image_path: str,
-    trained_model: str,
-) -> tuple[set[str], list[str], dict]:
-    codes, classified_objects, speed_metrics = get_iconclass_codes_gemma(trained_model, image_path)
-    flat: set[str] = set()
-    for code in codes:
-        flat.add(str(code))
-    return flat, classified_objects, speed_metrics
-
-
 def evaluate(
     eval_dir: str = EVAL_DIR,
     trained_model: str = DEFAULT_MODEL,
+    mapping_mode: str = "auto",
     max_images: int | None = None,
 ) -> dict:
     data = load_eval_data(eval_dir)
@@ -79,11 +44,11 @@ def evaluate(
     correct_images = 0
 
     # Prepare output path early for incremental saving
-    output_dir = "output"
+    output_dir = OUTPUT_DIR
     os.makedirs(output_dir, exist_ok=True)
     model_basename = os.path.basename(trained_model).replace(".", "_")
     timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"eval_{model_basename}_{timestamp_str}.json"
+    filename = f"eval_{model_basename}_{mapping_mode}_{timestamp_str}.json"
     output_path = os.path.join(output_dir, filename)
 
     print(f"Evaluating {total_images} images from {eval_dir} ...")
@@ -97,22 +62,24 @@ def evaluate(
             continue
 
         processed_images += 1
-        start_time = time.time()
-        try:
-            if "gemma" in trained_model.lower() or "ram" in trained_model.lower():
-                pred_codes_set, detected, model_speed = predict_iconclass_codes_gemma(img_path, trained_model)
-            else:
-                pred_codes_set, detected, model_speed = predict_iconclass_codes(img_path, trained_model)
-        except Exception as e:
-            print(f"  [WARN] {img_name}: {e}")
-            continue
-        total_pipeline_time = time.time() - start_time
+        with timed() as elapsed:
+            try:
+                pred_codes, detected, model_speed = get_iconclass_codes(
+                    trained_model=trained_model,
+                    image_path=img_path,
+                    mapping_mode=mapping_mode
+                )
+                pred_codes_set = set(pred_codes)
+            except Exception as e:
+                print(f"  [WARN] {img_name}: {e}")
+                continue
+        total_pipeline_time = elapsed()
 
         pred_codes = sorted(list(pred_codes_set))
         gt_set = set(gt_codes)
         pred_set = set(pred_codes)
         matches = sorted(list(pred_set & gt_set))
-        
+
         # Calculate metrics for this image
         precision = len(matches) / len(pred_set) if len(pred_set) > 0 else 0.0
         recall = len(matches) / len(gt_set) if len(gt_set) > 0 else 0.0
@@ -155,6 +122,7 @@ def evaluate(
             temp_summary = {
                 "timestamp": datetime.now().isoformat(),
                 "model": trained_model,
+                "mapping_mode": mapping_mode,
                 "eval_dir": eval_dir,
                 "total_images": total_images,
                 "processed_images": processed_images,
@@ -179,6 +147,7 @@ def evaluate(
     summary = {
         "timestamp": datetime.now().isoformat(),
         "model": trained_model,
+        "mapping_mode": mapping_mode,
         "eval_dir": eval_dir,
         "total_images": total_images,
         "processed_images": processed_images,
@@ -205,17 +174,23 @@ def evaluate(
     return summary
 
 
-if __name__ == "__main__":
+def main():
     import argparse
 
     parser = argparse.ArgumentParser(description="Evaluate CARIS Iconclass detection")
     parser.add_argument("--eval-dir", default=EVAL_DIR, help="Path to eval dataset directory")
     parser.add_argument("--model", default=DEFAULT_MODEL, help="YOLO model weights")
+    parser.add_argument("--mapping", default="auto", choices=["auto", "structural", "semantic"], help="Mapping mode")
     parser.add_argument("--max-images", type=int, default=None, help="Max images to evaluate (for quick tests)")
     args = parser.parse_args()
 
     evaluate(
         eval_dir=args.eval_dir,
         trained_model=args.model,
+        mapping_mode=args.mapping,
         max_images=args.max_images,
     )
+
+
+if __name__ == "__main__":
+    main()

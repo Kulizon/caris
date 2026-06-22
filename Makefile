@@ -1,9 +1,12 @@
-.PHONY: install requirements requirements-gemma run clean test split-dataset fine-tune evaluate download-data vector-base download-coco evaluate-coco evaluate-coco-all
+.PHONY: install requirements package requirements-gemma run clean test split-dataset fine-tune evaluate download-data vector-base download-coco evaluate-coco evaluate-coco-all
 
-install: requirements download-data vector-base
+install: requirements package download-data vector-base
 
 requirements:
 	pip install -r requirements.txt
+
+package:
+	pip install -e .
 
 requirements-gemma:
 	pip install ollama
@@ -19,10 +22,10 @@ download-data:
 	curl -s -L -o datasets/iconclass_dataset.zip https://iconclass.org/testset/779ba2ca9e977c58d818e3823a676973.zip
 
 vector-base:
-	python embeddings_utils.py
+	python -m caris.embeddings
 
 run:
-	python main.py
+	python -m caris.pipeline
 
 clean:
 	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
@@ -31,10 +34,10 @@ clean:
 
 split-dataset:
 	rm -rf eval_data/ tune_data/
-	python split_dataset.py
+	python -m caris.tools.split_dataset
 
 evaluate: split-dataset
-	python evaluate.py
+	python -m caris.evaluation.evaluate
 
 download-coco:
 	mkdir -p datasets/coco/annotations datasets/coco/val2017
@@ -45,10 +48,10 @@ download-coco:
 	rm /tmp/coco_annotations.zip /tmp/coco_val2017.zip
 
 evaluate-coco: datasets/coco/annotations/instances_val2017.json
-	python evaluate_coco.py --modes yolo --max-images 100
+	python -m caris.evaluation.evaluate_coco --modes yolo --max-images 100
 
 evaluate-coco-all: datasets/coco/annotations/instances_val2017.json
-	python evaluate_coco.py --modes yolo gemma --max-images 100
+	python -m caris.evaluation.evaluate_coco --modes yolo gemma --max-images 100
 
 datasets/coco/annotations/instances_val2017.json:
 	$(MAKE) download-coco

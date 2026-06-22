@@ -1,3 +1,29 @@
+Metadata-Version: 2.4
+Name: caris
+Version: 0.1.0
+Summary: CARIS - Iconclass symbol classification and recommendation from images.
+Requires-Python: >=3.12
+Description-Content-Type: text/markdown
+Requires-Dist: iconclass==0.28
+Requires-Dist: ultralytics
+Requires-Dist: transformers==4.49.0
+Requires-Dist: einops
+Requires-Dist: timm
+Requires-Dist: chromadb
+Provides-Extra: gemma
+Requires-Dist: ollama; extra == "gemma"
+Provides-Extra: ram
+Requires-Dist: torch; extra == "ram"
+Requires-Dist: pillow; extra == "ram"
+Provides-Extra: scrape
+Requires-Dist: requests; extra == "scrape"
+Requires-Dist: beautifulsoup4; extra == "scrape"
+Requires-Dist: tqdm; extra == "scrape"
+Provides-Extra: embeddings
+Requires-Dist: ollama; extra == "embeddings"
+Requires-Dist: requests; extra == "embeddings"
+Requires-Dist: tqdm; extra == "embeddings"
+
 # CARIS - Klasyfikacja i Rekomendacja Symboli Iconclass
 
 Projekt służy do automatycznej analizy obrazów, detekcji obiektów/tagów za pomocą różnych modeli uczenia maszynowego, a następnie przypisywania im odpowiednich kodów klasyfikacji **Iconclass** przy użyciu wyszukiwania strukturalnego lub bazy wektorowej (embeddings).
@@ -63,27 +89,7 @@ Dla modeli korzystających z wyszukiwania semantycznego (**Gemma** oraz **RAM**)
    ```bash
    python -m caris.embeddings
    ```
-    *Skrypt pobierze definicje Iconclass, wygeneruje dla nich embeddingi i zapisze lokalną bazę ChromaDB w folderze `data/iconclass_db`.*
-
-### 4. Pobranie i przygotowanie zbioru danych (dataset)
-Aby przygotować dane do ewaluacji i trenowania, musisz pobrać plik zip z zestawem danych oraz wagi modelu YOLO, a następnie podzielić dane:
-
-1. Pobierz wagi modelu YOLOv8 oraz główny zbiór danych (jeśli nie korzystasz z narzędzia `make`, wykonaj w PowerShell/CMD):
-   ```bash
-   # Utworzenie folderu na modele i pobranie wag YOLO
-   mkdir models
-   curl -L -o models/yolo26n.pt https://huggingface.co/Ultralytics/YOLO26/resolve/main/yolo26n.pt
-
-   # Utworzenie folderu na dane i pobranie głównego zbioru
-   mkdir datasets
-   curl -L -o datasets/iconclass_dataset.zip https://iconclass.org/testset/779ba2ca9e977c58d818e3823a676973.zip
-   ```
-
-2. Uruchom skrypt podziału zbioru:
-   ```bash
-   python -m caris.tools.split_dataset
-   ```
-   *Skrypt wyodrębni część obrazów i adnotacji, tworząc automatycznie katalogi `eval_data` (do ewaluacji) oraz `tune_data` (do fine-tuningu) w głównym katalogu projektu.*
+   *Skrypt pobierze definicje Iconclass, wygeneruje dla nich embeddingi i zapisze lokalną bazę ChromaDB w folderze `data/iconclass_db`.*
 
 ---
 
@@ -94,7 +100,7 @@ W pakiecie `caris.detection` zintegrowana jest funkcja `detect_objects_in_image(
 | Model | Identyfikator w `--model` | Metoda mapowania na Iconclass | Charakterystyka |
 | :--- | :--- | :--- | :--- |
 | **YOLO** | Ścieżka do pliku `.pt` (np. `models/yolo26n.pt`) | Rekurencyjne przeszukiwanie drzewa | Szybka detekcja obiektowa ograniczona do podstawowych klas (np. człowiek, pies, koń). |
-| **Gemma** (Ollama) | Dowolna nazwa zawierająca `"gemma"` (np. `gemma4:12b`) | Wyszukiwanie wektorowe (ChromaDB) | Model VLM wyciągający bogaty opis sceny i symboliki za pomocą promptu tekstowego. |
+| **Gemma** (Ollama) | Dowolna nazwa zawierająca `"gemma"` (np. `gemma`) | Wyszukiwanie wektorowe (ChromaDB) | Model VLM wyciągający bogaty opis sceny i symboliki za pomocą promptu tekstowego. |
 | **RAM++** (Recognize Anything) | Dowolna nazwa zawierająca `"ram"` (np. `ram` lub `ram_plus`) | Wyszukiwanie wektorowe (ChromaDB) | Wyjątkowo dokładny i szybki model tagujący typu open-vocabulary. Zwraca szeroki wachlarz tagów bez halucynacji. |
 
 ---
@@ -103,22 +109,19 @@ W pakiecie `caris.detection` zintegrowana jest funkcja `detect_objects_in_image(
 
 Ewaluację modeli przeprowadza się za pomocą modułu `caris.evaluation.evaluate`. Uruchamia on detekcję na obrazach testowych z katalogu `eval_data/images` i porównuje wyniki z rzeczywistymi kodami Iconclass z pliku `eval_data/data.json`.
 
-> [!TIP]
-> Do szybkich testów zaleca się dodanie parametru `--max-images 5` (lub innej małej liczby), zwłaszcza dla modeli VLM (Gemma) i RAM++, ponieważ pełna ewaluacja całego zbioru może zająć dużo czasu.
-
 ### 1. Ewaluacja za pomocą modelu YOLO
 ```bash
-python -m caris.evaluation.evaluate --model models/yolo26n.pt --max-images 5
+python -m caris.evaluation.evaluate --model models/yolo26n.pt
 ```
 
 ### 2. Ewaluacja za pomocą modelu Gemma (Ollama)
 ```bash
-python -m caris.evaluation.evaluate --model gemma4:12b --max-images 5
+python -m caris.evaluation.evaluate --model gemma
 ```
 
 ### 3. Ewaluacja za pomocą modelu RAM++
 ```bash
-python -m caris.evaluation.evaluate --model ram --max-images 5
+python -m caris.evaluation.evaluate --model ram
 ```
 
 ### ⚙️ Przydatne parametry modułu `caris.evaluation.evaluate`:
@@ -143,7 +146,7 @@ python -m caris.evaluation.evaluate --model ram --mapping structural
 
 ## 💡 Przykłady szybkiego testu detekcji
 
-Można szybko przetestować samą detekcję na wybranym obrazku (np. `polowanie.jpg`) za pomocą skryptu testowego:
+Możesz szybko przetestować samą detekcję na wybranym obrazku (np. `polowanie.jpg`) za pomocą skryptu testowego:
 
 ```python
 from caris.detection import detect_objects_in_image

@@ -7,22 +7,20 @@ Metrics (class-level, not bounding-box IoU):
   f1        = harmonic mean of precision and recall
   time      = total pipeline time per image
 
-Run:  python evaluate_coco.py [--modes yolo gemma] [--max-images 100]
+Run:  python -m caris.evaluation.evaluate_coco [--modes yolo gemma] [--max-images 100]
 Setup: make download-coco
 """
 
 import json
 import os
-import time
 from collections import defaultdict
 from datetime import datetime
 
-COCO_DIR = "datasets/coco"
-DEFAULT_YOLO_MODEL = "models/yolo26n.pt"
-DEFAULT_GEMMA_MODEL = "gemma4:12b"
+from caris.config import COCO_DIR, DEFAULT_GEMMA_MODEL, DEFAULT_TRAINED_MODEL, OUTPUT_DIR
+from caris.detection import gemma, yolo
+from caris.timing import timed
 
-# Module-level model cache so YOLO isn't reloaded for every image
-_YOLO_MODEL_CACHE: dict = {}
+DEFAULT_YOLO_MODEL = DEFAULT_TRAINED_MODEL
 
 
 def _load_coco_annotations(coco_dir: str) -> dict:
@@ -37,27 +35,11 @@ def _load_coco_annotations(coco_dir: str) -> dict:
 
 
 def _detect_yolo(model_path: str, image_path: str) -> tuple[list[str], dict]:
-    from ultralytics import YOLO
-    if model_path not in _YOLO_MODEL_CACHE:
-        _YOLO_MODEL_CACHE[model_path] = YOLO(model_path)
-    model = _YOLO_MODEL_CACHE[model_path]
-
-    results = model(image_path)
-    speed_metrics = {}
-    detected = []
-    if results:
-        speed_metrics = {k: v / 1000.0 for k, v in results[0].speed.items()}
-        for result in results:
-            for box in result.boxes:
-                name = model.names[int(box.cls)]
-                if name not in detected:
-                    detected.append(name)
-    return detected, speed_metrics
+    return yolo.detect_with_speed(model_path, image_path, remap_person=False, use_cache=True)
 
 
 def _detect_gemma(model_name: str, image_path: str) -> tuple[list[str], dict]:
-    from utils import detect_objects_gemma
-    return detect_objects_gemma(model_name, image_path)
+    return gemma.detect_with_speed(model_name, image_path)
 
 
 def _match_to_coco_classes(keywords: list[str], coco_classes: set[str]) -> set[str]:
@@ -105,7 +87,7 @@ def evaluate_coco(
 
     print(f"Found {len(images)} images in {img_dir}")
 
-    output_dir = "output"
+    output_dir = OUTPUT_DIR
     os.makedirs(output_dir, exist_ok=True)
     timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")
 
@@ -122,18 +104,18 @@ def evaluate_coco(
             if not gt_classes:
                 continue
 
-            start = time.time()
-            try:
-                if mode == "yolo":
-                    detected_raw, speed = _detect_yolo(yolo_model, img_path)
-                    pred_set = set(detected_raw)
-                else:
-                    detected_raw, speed = _detect_gemma(gemma_model, img_path)
-                    pred_set = _match_to_coco_classes(detected_raw, coco_classes)
-            except Exception as e:
-                print(f"  [WARN] {img_info['file_name']}: {e}")
-                continue
-            total_time = time.time() - start
+            with timed() as elapsed:
+                try:
+                    if mode == "yolo":
+                        detected_raw, speed = _detect_yolo(yolo_model, img_path)
+                        pred_set = set(detected_raw)
+                    else:
+                        detected_raw, speed = _detect_gemma(gemma_model, img_path)
+                        pred_set = _match_to_coco_classes(detected_raw, coco_classes)
+                except Exception as e:
+                    print(f"  [WARN] {img_info['file_name']}: {e}")
+                    continue
+            total_time = elapsed()
 
             metrics = _compute_metrics(pred_set, gt_classes)
             metrics["total_pipeline_time_s"] = total_time
@@ -202,7 +184,7 @@ def evaluate_coco(
     return all_results
 
 
-if __name__ == "__main__":
+def main():
     import argparse
 
     parser = argparse.ArgumentParser(description="Evaluate object detection on COCO val2017")
@@ -221,3 +203,7 @@ if __name__ == "__main__":
         max_images=args.max_images,
         modes=tuple(args.modes),
     )
+
+
+if __name__ == "__main__":
+    main()
